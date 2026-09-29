@@ -1,0 +1,57 @@
+{
+  "id": 3,
+  "width": 5,
+  "height": 5,
+  "player": {
+    "x": 0,
+    "y": 0
+  },
+  "exit": {
+    "x": 4,
+    "y": 4
+  },
+  "walls": [
+    {
+      "x": 0,
+      "y": 1
+    },
+    {
+      "x": 1,
+      "y": 1
+    },
+    {
+      "x": 1,
+      "y": 3
+    },
+    {
+      "x": 2,
+      "y": 1
+    },
+    {
+      "x": 2,
+      "y": 3
+    },
+    {
+      "x": 3,
+      "y": 3
+    },
+    {
+      "x": 4,
+      "y": 3
+    }
+  ],
+  "traps": [],
+  "keys": [],
+  "doors": [],
+  "teleports": [],
+  "coins": [
+    {
+      "x": 3,
+      "y": 1
+    }
+  ],
+  "movingObstacles": [],
+  "movingWalls": [],
+  "parMoves": 16,
+  "parTimeSeconds": 17
+}
