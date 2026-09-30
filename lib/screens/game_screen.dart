@@ -147,6 +147,11 @@ class _GameScreenState extends State<GameScreen> {
     Navigator.of(context).popUntil((route) => route.isFirst);
   }
 
+  void _openHouseAd() {
+    widget.analytics.logHouseAdClicked(AdService.houseAdUrl);
+    widget.ads.openHouseAd();
+  }
+
   void _togglePause() {
     final game = _game;
     if (game == null) return;
@@ -232,6 +237,7 @@ class _GameScreenState extends State<GameScreen> {
                 onNext: _nextLevel,
                 onRetry: _restart,
                 onHome: _goHome,
+                onHouseAdTap: _openHouseAd,
               ),
             if (_overlay == _Overlay.gameOver)
               _GameOverOverlay(
@@ -251,10 +257,7 @@ class _GameScreenState extends State<GameScreen> {
                     setState(() => _overlay = _Overlay.none);
                   }
                 },
-                onHouseAdTap: () {
-                  widget.analytics.logHouseAdClicked(AdService.houseAdUrl);
-                  widget.ads.openHouseAd();
-                },
+                onHouseAdTap: _openHouseAd,
               ),
           ],
         ),
@@ -396,6 +399,7 @@ class _LevelCompleteOverlay extends StatelessWidget {
     required this.onNext,
     required this.onRetry,
     required this.onHome,
+    required this.onHouseAdTap,
   });
 
   final int stars;
@@ -405,6 +409,7 @@ class _LevelCompleteOverlay extends StatelessWidget {
   final VoidCallback onNext;
   final VoidCallback onRetry;
   final VoidCallback onHome;
+  final VoidCallback onHouseAdTap;
 
   @override
   Widget build(BuildContext context) {
@@ -428,7 +433,9 @@ class _LevelCompleteOverlay extends StatelessWidget {
           const SizedBox(height: 12),
           Text('$moves moves  •  ${seconds}s  •  $coins coins',
               style: Theme.of(context).textTheme.bodyMedium),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
+          _HouseAdBanner(onTap: onHouseAdTap),
+          const SizedBox(height: 16),
           GameButton(label: 'Next Level', onPressed: onNext),
           const SizedBox(height: 12),
           GameButton(label: 'Retry', filled: false, onPressed: onRetry),
@@ -485,11 +492,11 @@ class _GameOverOverlay extends StatelessWidget {
   }
 }
 
-/// A cross-promo fallback shown in place of the rewarded-continue slot when
-/// no real ad is available (e.g. offline). Deliberately does not grant any
-/// in-game reward for tapping it -- there is no ad-network verification
-/// behind a plain link, so it is labeled "Sponsored" rather than disguised
-/// as the real continue-ad flow.
+/// A cross-promo banner shown on Level Complete, and as a fallback on Game
+/// Over when no real rewarded ad is available (e.g. offline). Deliberately
+/// does not grant any in-game reward for tapping it -- there is no
+/// ad-network verification behind a plain link, so it is labeled
+/// "Sponsored" rather than disguised as the real continue-ad flow.
 class _HouseAdBanner extends StatelessWidget {
   const _HouseAdBanner({required this.onTap});
 
