@@ -18,6 +18,15 @@ class LevelManager {
   int? bestMovesFor(int levelId) => _storage.bestMovesFor(levelId);
   int? bestTimeFor(int levelId) => _storage.bestTimeFor(levelId);
 
+  /// The level the PLAY button should open: the highest unlocked one.
+  int get nextLevelToPlay => _storage.unlockedCount;
+
+  int get completedCount =>
+      List.generate(totalLevels, (i) => i + 1).where(isCompleted).length;
+
+  int get totalStars =>
+      List.generate(totalLevels, (i) => starsFor(i + 1)).fold(0, (a, b) => a + b);
+
   Future<Level> loadLevel(int levelId) => _loader.load(levelId);
 
   /// 1-3 stars based on how close the run was to the level's par

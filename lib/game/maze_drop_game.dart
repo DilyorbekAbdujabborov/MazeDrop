@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:flame/components.dart';
 import 'package:flame/effects.dart';
 import 'package:flame/game.dart';
+import 'package:flame/particles.dart';
 
 import '../models/level.dart';
 import '../models/level_object.dart';
@@ -81,6 +82,8 @@ class MazeDropGame extends FlameGame {
   double tileSize = 32;
   Vector2 boardOrigin = Vector2.zero();
   int elapsedMs = 0;
+  double _remainingMs = 0;
+  final math.Random _rng = math.Random(7);
 
   final List<_TileEntry> _tileEntries = [];
   final Map<GridPos, KeyComponent> _keyComponents = {};
@@ -96,8 +99,14 @@ class MazeDropGame extends FlameGame {
   Future<void> onLoad() async {
     _layout(size);
     await _buildBoard();
+    _resetCountdown();
     audio.startMusic();
     onStateChanged(playerState);
+  }
+
+  void _resetCountdown() {
+    _remainingMs = level.timeLimitSeconds * 1000.0;
+    playerState.remainingMs = _remainingMs.round();
   }
 
   @override
@@ -114,8 +123,26 @@ class MazeDropGame extends FlameGame {
     if (playerState.status == RunStatus.playing) {
       elapsedMs += (dt * 1000).round();
       playerState.elapsedMs = elapsedMs;
+      _updateCountdown(dt);
     }
     _updateObstacles(dt);
+  }
+
+  void _updateCountdown(double dt) {
+    if (!level.hasTimeLimit) return;
+    _remainingMs -= dt * 1000;
+    final previousSecond = playerState.remainingSeconds;
+    playerState.remainingMs = math.max(0, _remainingMs.round());
+    if (_remainingMs <= 0) {
+      // Out of time costs a life, exactly like a trap; the clock restarts
+      // for the next attempt so the player isn't stuck in a death loop.
+      _resetCountdown();
+      _handleHazardHit();
+      return;
+    }
+    if (playerState.remainingSeconds != previousSecond) {
+      onStateChanged(playerState);
+    }
   }
 
   void _layout(Vector2 canvasSize) {
@@ -293,6 +320,7 @@ class MazeDropGame extends FlameGame {
       playerState.coinsCollected++;
       audio.playSfx(SoundEffect.collectCoin);
       analytics.logCoinCollected(level.id);
+      _burst(pos, AppColors.gold, count: 10, speed: 90);
     }
 
     final key = _keyComponents[pos];
@@ -301,6 +329,7 @@ class MazeDropGame extends FlameGame {
       playerState.collectKey(key.data.id);
       audio.playSfx(SoundEffect.collectKey);
       analytics.logKeyCollected(level.id);
+      _burst(pos, AppColors.gold, count: 14, speed: 120);
       _unlockMatchingDoors(key.data.id);
     }
 
@@ -321,8 +350,11 @@ class MazeDropGame extends FlameGame {
           }
         }
         if (partner != null) {
+          _burst(pos, AppColors.accent, count: 12, speed: 110);
           playerState.position = partner.pos;
           _playerComponent.position = cellTopLeft(partner.pos);
+          _playerComponent.playSpawnAnimation();
+          _burst(partner.pos, AppColors.accent, count: 12, speed: 110);
           audio.playSfx(SoundEffect.teleport);
         }
         break;
@@ -343,6 +375,7 @@ class MazeDropGame extends FlameGame {
       if (door.data.keyId == keyId) {
         door.isOpen = true;
         unlockedAny = true;
+        _burst(door.data.pos, AppColors.wall, count: 8, speed: 70);
       }
     }
     if (unlockedAny) audio.playSfx(SoundEffect.unlockDoor);
@@ -352,6 +385,7 @@ class MazeDropGame extends FlameGame {
     if (playerState.status != RunStatus.playing) return;
     playerState.lives--;
     audio.playSfx(SoundEffect.trap);
+    _burst(playerState.position, AppColors.primary, count: 18, speed: 160);
     onStateChanged(playerState);
 
     if (playerState.lives <= 0) {
@@ -377,12 +411,44 @@ class MazeDropGame extends FlameGame {
   void _handleWin() {
     playerState.status = RunStatus.won;
     audio.playSfx(SoundEffect.levelComplete);
+    _burst(level.exit, AppColors.accent, count: 24, speed: 220);
+    _burst(level.exit, AppColors.gold, count: 16, speed: 160);
     analytics.logLevelCompleted(
       levelId: level.id,
       timeSeconds: playerState.elapsedSeconds,
       moves: playerState.moves,
     );
     onWin(playerState);
+  }
+
+  /// Short radial burst of shrinking droplets centred on [cell].
+  void _burst(GridPos cell, Color color, {required int count, required double speed}) {
+    final center = cellTopLeft(cell) + _tileVector / 2;
+    final paint = Paint()..color = color;
+    add(
+      ParticleSystemComponent(
+        position: center,
+        particle: Particle.generate(
+          count: count,
+          lifespan: 0.45,
+          generator: (_) {
+            final angle = _rng.nextDouble() * math.pi * 2;
+            final magnitude = speed * (0.5 + _rng.nextDouble());
+            return AcceleratedParticle(
+              speed: Vector2(math.cos(angle), math.sin(angle)) * magnitude,
+              acceleration: Vector2(0, 260),
+              child: ScalingParticle(
+                to: 0,
+                child: CircleParticle(
+                  radius: tileSize * (0.05 + _rng.nextDouble() * 0.06),
+                  paint: paint,
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
   }
 
   /// Grants one extra life and resumes play from the current position,

@@ -19,6 +19,9 @@ class Level {
   final int parMoves;
   final int parTimeSeconds;
 
+  /// Countdown budget for the level; running out costs a life. 0 = no limit.
+  final int timeLimitSeconds;
+
   const Level({
     required this.id,
     required this.width,
@@ -35,7 +38,10 @@ class Level {
     required this.movingWalls,
     required this.parMoves,
     required this.parTimeSeconds,
+    this.timeLimitSeconds = 0,
   });
+
+  bool get hasTimeLimit => timeLimitSeconds > 0;
 
   factory Level.fromJson(Map<String, dynamic> json) {
     try {
@@ -86,6 +92,7 @@ class Level {
         movingWalls: movingWalls,
         parMoves: (json['parMoves'] as num?)?.toInt() ?? 0,
         parTimeSeconds: (json['parTimeSeconds'] as num?)?.toInt() ?? 0,
+        timeLimitSeconds: (json['timeLimitSeconds'] as num?)?.toInt() ?? 0,
       );
     } on FormatException {
       rethrow;

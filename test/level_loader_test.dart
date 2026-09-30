@@ -11,6 +11,9 @@ void main() {
       expect(level.id, id);
       expect(level.inBounds(level.player), isTrue);
       expect(level.inBounds(level.exit), isTrue);
+      expect(level.hasTimeLimit, isTrue, reason: 'every shipped level is timed');
+      expect(level.walls.contains(level.player), isFalse);
+      expect(level.walls.contains(level.exit), isFalse);
     }
   });
 

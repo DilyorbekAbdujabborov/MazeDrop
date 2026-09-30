@@ -10,6 +10,7 @@ import 'systems/analytics_service.dart';
 import 'systems/audio_manager.dart';
 import 'systems/level_manager.dart';
 import 'theme/app_theme.dart';
+import 'widgets/game_button.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,6 +28,7 @@ Future<void> main() async {
   analytics.logGameStarted();
   unawaited(ads.initialize());
   unawaited(audio.startMusic());
+  GameButton.onAnyPress = () => audio.playSfx(SoundEffect.buttonClick);
 
   runApp(
     MazeDropApp(

@@ -42,7 +42,9 @@ lib/
   services/storage_service.dart   SharedPreferences-backed progress/settings
   theme/app_theme.dart       Colors, text styles, animation durations
 assets/levels/level_01.json .. level_30.json
+assets/audio/*.wav          Synthesized SFX + music loop
 tool/generate_levels.py     Deterministic level generator (see below)
+tool/generate_audio.py      Regenerates every audio asset from oscillators
 ```
 
 ### Adding/editing levels
@@ -58,18 +60,26 @@ solvable, same output every run for a given spec), edit `LEVEL_SPECS` in
 python3 tool/generate_levels.py assets/levels
 ```
 
+Three layouts are used: a serpentine corridor (levels 1-2), a perfect
+maze with dead ends (3-15) and a braided maze with loops/alternative
+routes (16+). Always-on traps are only ever placed off the required
+route; timed traps, moving obstacles and sliding walls sit on it and are
+passable with timing. Every level carries a `timeLimitSeconds` countdown:
+running out costs a life and restarts the clock.
+
 The script BFS-verifies every generated level is solvable (accounting for
-locked doors and teleports) before writing it, and refuses to write an
-unsolvable level.
+locked doors, teleports, and treating always-on traps as walls) before
+writing it, and aborts rather than write an unsolvable level.
 
 ### Placeholder architecture (by design)
 
 Per the project brief, these are wired up as real, working code paths but
 intentionally run on placeholders until real assets/accounts exist:
 
-- **Audio**: `AudioManager` expects files under `assets/audio/*.mp3`
-  (see the file names in `audio_manager.dart`). None are bundled yet, so
-  playback calls fail silently and gameplay continues normally.
+- **Audio**: all SFX and the background loop are synthesized WAVs
+  (`tool/generate_audio.py` → `assets/audio/`), so they are original and
+  licence-free. Replace any file with a produced asset of the same name
+  to upgrade it; a missing file fails silently, never crashes.
 - **Ads**: `AdService` uses Google's public **test** AdMob ad unit ids.
   Swap them for real ids in `ad_service.dart` (and the app id in
   `android/app/src/main/AndroidManifest.xml`) before a real release.
@@ -100,5 +110,5 @@ Before a real Play Store release, also:
 1. Replace the AdMob test ids (see above).
 2. Add a real release-signing config in `android/app/build.gradle.kts`
    (this project currently only has debug signing set up).
-3. Drop real audio files into `assets/audio/` and declare them in
-   `pubspec.yaml`.
+3. Optionally replace the synthesized audio in `assets/audio/` with
+   produced assets (same file names).

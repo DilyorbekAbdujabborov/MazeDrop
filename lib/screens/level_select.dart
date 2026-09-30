@@ -7,7 +7,18 @@ import '../systems/audio_manager.dart';
 import '../systems/level_manager.dart';
 import '../theme/app_theme.dart';
 import '../widgets/level_card.dart';
+import '../widgets/screen_header.dart';
 import 'game_screen.dart';
+
+const _chapters = <String>[
+  'First Drops',
+  'Keys & Doors',
+  'Spikes & Saws',
+  'Portals',
+  'Against the Clock',
+  'Mastery',
+];
+const _levelsPerChapter = 5;
 
 class LevelSelectScreen extends StatefulWidget {
   const LevelSelectScreen({
@@ -43,37 +54,131 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
         ),
       ),
     );
-    setState(() {}); // refresh unlock/star state after returning.
+    if (mounted) setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
-    final total = widget.levelManager.totalLevels;
+    final manager = widget.levelManager;
+    final current = manager.nextLevelToPlay;
+    final chapterCount = (manager.totalLevels / _levelsPerChapter).ceil();
+
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.background,
-        title: const Text('Levels'),
-      ),
       body: Container(
         decoration: AppTheme.screenBackground,
-        padding: const EdgeInsets.all(16),
-        child: GridView.builder(
-          itemCount: total,
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 5,
-            crossAxisSpacing: 10,
-            mainAxisSpacing: 10,
+        child: SafeArea(
+          child: Column(
+            children: [
+              ScreenHeader(
+                title: 'Levels',
+                trailing: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: AppTheme.chip(),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.star_rounded, color: AppColors.gold, size: 16),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${manager.totalStars}',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.textPrimary),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Expanded(
+                child: ListView.builder(
+                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
+                  itemCount: chapterCount,
+                  itemBuilder: (context, chapter) {
+                    final first = chapter * _levelsPerChapter + 1;
+                    final last = (first + _levelsPerChapter - 1).clamp(1, manager.totalLevels);
+                    final chapterUnlocked = manager.isUnlocked(first);
+                    final chapterStars = List.generate(last - first + 1, (i) => manager.starsFor(first + i))
+                        .fold(0, (a, b) => a + b);
+                    return _ChapterSection(
+                      title: chapter < _chapters.length ? _chapters[chapter] : 'Chapter ${chapter + 1}',
+                      unlocked: chapterUnlocked,
+                      stars: chapterStars,
+                      maxStars: (last - first + 1) * 3,
+                      child: GridView.count(
+                        crossAxisCount: _levelsPerChapter,
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        crossAxisSpacing: 10,
+                        mainAxisSpacing: 10,
+                        children: List.generate(last - first + 1, (i) {
+                          final id = first + i;
+                          return LevelCard(
+                            levelId: id,
+                            unlocked: manager.isUnlocked(id),
+                            stars: manager.starsFor(id),
+                            isCurrent: id == current && !manager.isCompleted(id),
+                            onTap: () => _openLevel(id),
+                          );
+                        }),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
           ),
-          itemBuilder: (context, index) {
-            final levelId = index + 1;
-            return LevelCard(
-              levelId: levelId,
-              unlocked: widget.levelManager.isUnlocked(levelId),
-              stars: widget.levelManager.starsFor(levelId),
-              onTap: () => _openLevel(levelId),
-            );
-          },
+        ),
+      ),
+    );
+  }
+}
+
+class _ChapterSection extends StatelessWidget {
+  const _ChapterSection({
+    required this.title,
+    required this.unlocked,
+    required this.stars,
+    required this.maxStars,
+    required this.child,
+  });
+
+  final String title;
+  final bool unlocked;
+  final int stars;
+  final int maxStars;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 18),
+      child: Opacity(
+        opacity: unlocked ? 1 : 0.55,
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: AppTheme.glassCard(radius: 22),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(title, style: Theme.of(context).textTheme.titleMedium),
+                  ),
+                  Icon(
+                    unlocked ? Icons.star_rounded : Icons.lock_rounded,
+                    size: 15,
+                    color: unlocked ? AppColors.gold : AppColors.textSecondary,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    unlocked ? '$stars / $maxStars' : 'Locked',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              child,
+            ],
+          ),
         ),
       ),
     );

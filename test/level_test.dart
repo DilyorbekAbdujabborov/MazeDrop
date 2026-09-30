@@ -29,6 +29,14 @@ void main() {
     expect(level.walls, contains(const GridPos(1, 1)));
     expect(level.inBounds(const GridPos(2, 2)), isTrue);
     expect(level.inBounds(const GridPos(3, 0)), isFalse);
+    expect(level.hasTimeLimit, isFalse);
+  });
+
+  test('parses an optional time limit', () {
+    final json = _validJson()..['timeLimitSeconds'] = 45;
+    final level = Level.fromJson(json);
+    expect(level.timeLimitSeconds, 45);
+    expect(level.hasTimeLimit, isTrue);
   });
 
   test('missing required field throws FormatException', () {

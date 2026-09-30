@@ -9,6 +9,8 @@ class PlayerState {
   int lives;
   int moves;
   int elapsedMs;
+  /// Milliseconds left on the level countdown; 0 when the level has no limit.
+  int remainingMs;
   int coinsCollected;
   RunStatus status;
   final Set<String> collectedKeyIds;
@@ -18,6 +20,7 @@ class PlayerState {
     this.lives = 3,
     this.moves = 0,
     this.elapsedMs = 0,
+    this.remainingMs = 0,
     this.coinsCollected = 0,
     this.status = RunStatus.playing,
     Set<String>? collectedKeyIds,
@@ -28,6 +31,9 @@ class PlayerState {
   void collectKey(String id) => collectedKeyIds.add(id);
 
   int get elapsedSeconds => elapsedMs ~/ 1000;
+
+  /// Seconds left, rounded up so the HUD never shows 0 while time remains.
+  int get remainingSeconds => (remainingMs + 999) ~/ 1000;
 
   bool get isAlive => lives > 0;
 }
