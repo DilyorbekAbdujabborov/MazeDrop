@@ -236,6 +236,7 @@ class _GameScreenState extends State<GameScreen> {
             if (_overlay == _Overlay.gameOver)
               _GameOverOverlay(
                 canContinue: widget.ads.isRewardedReady,
+                showHouseAd: widget.ads.shouldShowHouseAd,
                 onRestart: _restart,
                 onHome: _goHome,
                 onContinue: () async {
@@ -249,6 +250,10 @@ class _GameScreenState extends State<GameScreen> {
                     game.continueWithExtraLife();
                     setState(() => _overlay = _Overlay.none);
                   }
+                },
+                onHouseAdTap: () {
+                  widget.analytics.logHouseAdClicked(AdService.houseAdUrl);
+                  widget.ads.openHouseAd();
                 },
               ),
           ],
@@ -438,15 +443,19 @@ class _LevelCompleteOverlay extends StatelessWidget {
 class _GameOverOverlay extends StatelessWidget {
   const _GameOverOverlay({
     required this.canContinue,
+    required this.showHouseAd,
     required this.onRestart,
     required this.onHome,
     required this.onContinue,
+    required this.onHouseAdTap,
   });
 
   final bool canContinue;
+  final bool showHouseAd;
   final VoidCallback onRestart;
   final VoidCallback onHome;
   final VoidCallback onContinue;
+  final VoidCallback onHouseAdTap;
 
   @override
   Widget build(BuildContext context) {
@@ -463,11 +472,65 @@ class _GameOverOverlay extends StatelessWidget {
               onPressed: onContinue,
             ),
             const SizedBox(height: 12),
+          ] else if (showHouseAd) ...[
+            _HouseAdBanner(onTap: onHouseAdTap),
+            const SizedBox(height: 12),
           ],
           GameButton(label: 'Restart Level', filled: !canContinue, onPressed: onRestart),
           const SizedBox(height: 12),
           GameButton(label: 'Main Menu', filled: false, onPressed: onHome),
         ],
+      ),
+    );
+  }
+}
+
+/// A cross-promo fallback shown in place of the rewarded-continue slot when
+/// no real ad is available (e.g. offline). Deliberately does not grant any
+/// in-game reward for tapping it -- there is no ad-network verification
+/// behind a plain link, so it is labeled "Sponsored" rather than disguised
+/// as the real continue-ad flow.
+class _HouseAdBanner extends StatelessWidget {
+  const _HouseAdBanner({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: AppColors.background,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.textSecondary, width: 1),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.campaign, color: AppColors.accent, size: 20),
+            const SizedBox(width: 10),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Sponsored',
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodyMedium
+                      ?.copyWith(fontSize: 10, letterSpacing: 0.6),
+                ),
+                Text(
+                  'Check out Cefrify',
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontSize: 14),
+                ),
+              ],
+            ),
+            const SizedBox(width: 8),
+            const Icon(Icons.open_in_new, color: AppColors.textSecondary, size: 16),
+          ],
+        ),
       ),
     );
   }

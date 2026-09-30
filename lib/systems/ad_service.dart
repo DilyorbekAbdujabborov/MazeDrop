@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// Monetization architecture: rewarded "continue" ads and level-complete
 /// interstitials, rate-limited so ads never interrupt gameplay itself.
@@ -11,6 +12,14 @@ class AdService {
       'ca-app-pub-3940256099942544/5224354917';
   static const String _interstitialAdUnitId =
       'ca-app-pub-3940256099942544/1033173712';
+
+  /// Cross-promo link shown instead of a real ad slot when no real ad is
+  /// available (typically: offline, or AdMob failed to load). This is a
+  /// house ad: opening it does not grant any in-game reward, since there
+  /// is no ad-network verification behind it. The UTM parameters let
+  /// cefrify.uz attribute traffic back to this in-app placement.
+  static const String houseAdUrl =
+      'https://cefrify.uz/?utm_source=mazedrop&utm_medium=house_ad&utm_campaign=offline_fallback';
 
   /// Show an interstitial at most once every [interstitialFrequency] level
   /// completions, never on every level.
@@ -119,5 +128,22 @@ class AdService {
   void dispose() {
     _rewardedAd?.dispose();
     _interstitialAd?.dispose();
+  }
+
+  /// True when there is no loaded rewarded ad to show, i.e. the house-ad
+  /// fallback slot should be offered instead (offline, or AdMob failed to
+  /// load).
+  bool get shouldShowHouseAd => !isRewardedReady;
+
+  /// Opens [houseAdUrl] in the device's browser. Returns false if nothing
+  /// on the device can handle the link, instead of throwing.
+  Future<bool> openHouseAd() async {
+    final uri = Uri.parse(houseAdUrl);
+    try {
+      return await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (e) {
+      if (kDebugMode) debugPrint('AdService: could not open house ad: $e');
+      return false;
+    }
   }
 }

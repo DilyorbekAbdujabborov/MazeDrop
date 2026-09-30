@@ -16,6 +16,7 @@ class AnalyticsService {
   static const continueUsed = 'continue_used';
   static const coinCollected = 'coin_collected';
   static const keyCollected = 'key_collected';
+  static const houseAdClicked = 'house_ad_clicked';
 
   void logGameStarted() => _send(gameStarted);
 
@@ -49,6 +50,9 @@ class AnalyticsService {
 
   void logKeyCollected(int levelId) =>
       _send(keyCollected, {'level_id': levelId});
+
+  void logHouseAdClicked(String destinationUrl) =>
+      _send(houseAdClicked, {'url': destinationUrl});
 
   void _send(String event, [Map<String, Object?>? params]) {
     if (kDebugMode) {
